@@ -133,7 +133,20 @@ augeas_recipe = process_recipe('augeas', '1.8.1') do |recipe|
     "PKG_CONFIG_PATH=#{libxml_recipe.path}/lib/pkgconfig",
   ]
 
-  $libs << ' -lfa'
+  $libs = append_library($libs, 'fa')
 end
+
+# Don't link against `libc`.
+#
+# TODO: We should be able to use `-nolibc` rather than `-nostdlib` when a new
+# version of GCC is released.
+$LIBS = $LIBS.shellsplit.select do |lib|
+  lib != '-lc'
+end.shelljoin
+$LDFLAGS << ' -nostdlib -lgcc'
+
+# This is need for i686 as otherwise compilation will fail with undefined
+# references to `__stack_chk_fail_local`.
+$LIBS << ' -lssp_nonshared'
 
 create_makefile('_augeas')
